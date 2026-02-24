@@ -1,100 +1,233 @@
-# test_webcrm.py
-# Full script with debugging, token cleaning, and sys import fixed
+"""
+test_webcrm.py - Simple WebCRM API Connection Tester
+
+This script provides a simple interface to test WebCRM API endpoints.
+Similar to Postman, but in pure Python code.
+
+Usage:
+    python test_webcrm.py
+"""
 
 import requests
 from dotenv import load_dotenv
 import os
-import sys  # ← Added this line to fix the NameError
+import sys
+import json
+from typing import Optional, Dict, Any
 
-# ────────────────────────────────────────────────
 # Load environment variables from .env file
 load_dotenv()
 
-BASE_URL = os.getenv("WEBCRM_BASE_URL")
-TOKEN    = os.getenv("WEBCRM_TOKEN")
+# Configuration
+BASE_URL = os.getenv("WEBCRM_BASE_URL", "").strip()
+TOKEN = os.getenv("WEBCRM_TOKEN", "").strip()
 
-# Aggressive cleaning of the token
-clean_token = TOKEN.strip() if TOKEN else ""
-
-# ────────────────────────────────────────────────
-# Debug: Show exactly what we loaded
-print("=== DEBUG: .env LOADING ===")
-print("BASE_URL:", BASE_URL)
-print("Original TOKEN length:", len(TOKEN) if TOKEN else "None")
-print("Cleaned token length:", len(clean_token))
-print("Cleaned token prefix (first 15 chars):", clean_token[:15] + "..." if len(clean_token) > 15 else clean_token)
-print("Cleaned token suffix (last 10 chars):", "..." + clean_token[-10:] if len(clean_token) > 10 else clean_token)
-print("=================================\n")
-
-if not BASE_URL or not clean_token:
-    print("ERROR: Missing WEBCRM_BASE_URL or WEBCRM_TOKEN in .env file")
-    print("Make sure .env contains exactly:")
-    print("WEBCRM_BASE_URL=https://api.webcrm.com")
-    print("WEBCRM_TOKEN=your-36-character-token-here")
-    exit(1)
+# Validate configuration
+if not BASE_URL or not TOKEN:
+    print("❌ ERROR: Missing WEBCRM_BASE_URL or WEBCRM_TOKEN in .env file")
+    print("\nMake sure .env contains:")
+    print("  WEBCRM_BASE_URL=https://api.webcrm.com")
+    print("  WEBCRM_TOKEN=your-36-character-token-here")
+    sys.exit(1)
 
 # ────────────────────────────────────────────────
-# Headers – exact format that worked in Postman (Bearer + space + token)
-HEADERS = {
-    "Authorization": "Bearer " + clean_token,
-    "Accept": "application/json",
-    "Content-Type": "application/json"
-}
-
-# Debug: Show the EXACT header that will be sent
-print("=== DEBUG: HEADERS THAT WILL BE SENT ===")
-print("Authorization header (repr):", repr(HEADERS["Authorization"]))
-print("Authorization length:", len(HEADERS["Authorization"]))
-print("Other headers:", {k: v for k, v in HEADERS.items() if k != "Authorization"})
-print("=================================\n")
-
-# ────────────────────────────────────────────────
-def get_organisations(page=1, size=20):
-    """Fetch organisations from webCRM API"""
-    url = f"{BASE_URL}/Organisations?page={page}&size={size}"
+# API Client Class
+class WebCRMClient:
+    """Simple WebCRM API client for testing endpoints"""
     
-    print(f"Requesting: {url}")
-    print("Sending request now...\n")
-
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
+    def __init__(self, base_url: str, token: str, debug: bool = True):
+        self.base_url = base_url.rstrip("/")
+        self.token = token.strip()
+        self.debug = debug
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+    
+    def _print_debug(self, title: str, content: str):
+        """Print debug information if debug mode is enabled"""
+        if self.debug:
+            print(f"  ℹ️  [{title}] {content}")
+    
+    def _print_request(self, method: str, url: str):
+        """Print request details"""
+        if self.debug:
+            print(f"\n📤 {method} {url}")
+    
+    def _print_response(self, status_code: int, response_text: str = "", is_json: bool = False):
+        """Print response details"""
+        if self.debug:
+            status_symbol = "✅" if 200 <= status_code < 300 else "❌"
+            print(f"📥 {status_symbol} Status: {status_code}")
+            if response_text and len(response_text) < 500:
+                print(f"   {response_text[:500]}")
+    
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        data: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Generic method to make API requests"""
+        url = f"{self.base_url}{endpoint}"
         
-        print(f"Status Code: {response.status_code}")
+        try:
+            self._print_request(method, url)
+            
+            if method.upper() == "GET":
+                response = requests.get(url, headers=self.headers, params=params, timeout=15)
+            elif method.upper() == "POST":
+                response = requests.post(url, headers=self.headers, json=data, timeout=15)
+            elif method.upper() == "PUT":
+                response = requests.put(url, headers=self.headers, json=data, timeout=15)
+            elif method.upper() == "DELETE":
+                response = requests.delete(url, headers=self.headers, timeout=15)
+            else:
+                print(f"❌ Unsupported HTTP method: {method}")
+                return None
+            
+            self._print_response(response.status_code, response.text)
+            
+            # Handle successful responses
+            if response.status_code in (200, 201, 204):
+                if response.text:
+                    return response.json()
+                return {"status": "success", "code": response.status_code}
+            else:
+                print(f"❌ Request failed with status {response.status_code}")
+                if response.text:
+                    try:
+                        print("   Error details:", json.dumps(response.json(), indent=2))
+                    except json.JSONDecodeError:
+                        print(f"   Response: {response.text[:500]}")
+                return None
         
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                print(f"Success! Found {len(data)} organisations on page {page}")
-                if data:
-                    print("\nFirst organisation (keys only):")
-                    print(list(data[0].keys()))
-                    print("\nExample name:", data[0].get("OrganisationName", "N/A"))
-                    print("Example email:", data[0].get("OrganisationEmail", "N/A"))
-                else:
-                    print("No organisations found (empty list)")
-            except ValueError:
-                print("Response was 200 but not valid JSON")
-                print("Response body preview:", response.text[:500])
-        else:
-            print("Request failed.")
-            print("Response body preview:", response.text[:800] or "[empty]")
-            print("Full headers sent:", HEADERS)
-        
-        return response.status_code == 200
-    except requests.exceptions.RequestException as e:
-        print("Connection/request error:", str(e))
-        return False
-
+        except requests.exceptions.Timeout:
+            print("❌ Request timeout (15s exceeded)")
+            return None
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Connection error: {str(e)}")
+            return None
+        except json.JSONDecodeError as e:
+            print(f"❌ Invalid JSON response: {str(e)}")
+            return None
+    
+    # ────────────────────────────────────────────────
+    # API Methods (Examples)
+    
+    def get_organisations(self, page: int = 1, size: int = 20) -> Optional[list]:
+        """Fetch organisations"""
+        result = self._make_request("GET", "/Organisations", params={"page": page, "size": size})
+        if result:
+            print(f"✅ Found {len(result)} organisations")
+            if result:
+                self._print_debug("Sample", f"Name: {result[0].get('OrganisationName', 'N/A')}")
+        return result
+    
+    def get_organisation_by_id(self, org_id: str) -> Optional[Dict]:
+        """Fetch a single organisation"""
+        result = self._make_request("GET", f"/Organisations/{org_id}")
+        if result:
+            print(f"✅ Organisation retrieved")
+            self._print_debug("Name", result.get("OrganisationName", "N/A"))
+        return result
+    
+    def get_opportunities(self, page: int = 1, size: int = 20) -> Optional[list]:
+        """Fetch opportunities"""
+        result = self._make_request("GET", "/Opportunities", params={"page": page, "size": size})
+        if result:
+            print(f"✅ Found {len(result)} opportunities")
+        return result
+    
+    def get_opportunity_by_id(self, opp_id: str) -> Optional[Dict]:
+        """Fetch a single opportunity"""
+        result = self._make_request("GET", f"/Opportunities/{opp_id}")
+        if result:
+            print(f"✅ Opportunity retrieved")
+            self._print_debug("Title", result.get("Name", "N/A"))
+        return result
+    
+    def get_persons(self, org_id: Optional[str] = None, page: int = 1, size: int = 20) -> Optional[list]:
+        """Fetch persons (optionally filtered by organisation)"""
+        endpoint = f"/Organisations/{org_id}/Persons" if org_id else "/Persons"
+        result = self._make_request("GET", endpoint, params={"page": page, "size": size})
+        if result:
+            print(f"✅ Found {len(result)} persons")
+        return result
+    
+    def create_person(self, data: Dict[str, Any]) -> Optional[Dict]:
+        """Create a new person"""
+        result = self._make_request("POST", "/Persons", data=data)
+        if result:
+            print(f"✅ Person created")
+        return result
+    
+    def test_connection(self) -> bool:
+        """Simple connection test"""
+        print("\n🔗 Testing API connection...\n")
+        result = self.get_organisations(size=1)
+        return result is not None
 
 # ────────────────────────────────────────────────
+# Example Usage
 if __name__ == "__main__":
-    print("Starting webCRM API test...")
-    print(f"Python version: {sys.version.split()[0]}")
-    print(f"requests version: {requests.__version__}\n")
+    print("\n" + "="*60)
+    print("WebCRM API Tester")
+    print("="*60)
+    print(f"Python: {sys.version.split()[0]}")
+    print(f"Requests: {requests.__version__}")
+    print(f"Base URL: {BASE_URL}\n")
     
-    success = get_organisations(page=1, size=20)
+    # Initialize client
+    client = WebCRMClient(BASE_URL, TOKEN, debug=True)
     
-    if success:
-        print("\nSUCCESS! Connection works → we can now add search/create/update.")
+    # Test 1: Connection test
+    # ─────────────────────────────────────────────
+    print("\n" + "─"*60)
+    print("Test 1: Connection Test")
+    print("─"*60)
+    if client.test_connection():
+        print("✅ Connection successful!\n")
     else:
-        print("\nFailed. Check token freshness, permissions, or recreate the token in webCRM.")
+        print("❌ Connection failed!\n")
+        sys.exit(1)
+    
+    # Test 2: Fetch organisations
+    # ─────────────────────────────────────────────
+    print("\n" + "─"*60)
+    print("Test 2: Fetch Organisations")
+    print("─"*60)
+    organisations = client.get_organisations(page=1, size=5)
+    
+    # Test 3: Fetch opportunities
+    # ─────────────────────────────────────────────
+    print("\n" + "─"*60)
+    print("Test 3: Fetch Opportunities")
+    print("─"*60)
+    opportunities = client.get_opportunities(page=1, size=5)
+    
+    # Test 4: Fetch specific opportunity (ID 168180 from example file)
+    # ─────────────────────────────────────────────
+    print("\n" + "─"*60)
+    print("Test 4: Fetch Specific Opportunity (ID: 168180)")
+    print("─"*60)
+    opportunity = client.get_opportunity_by_id("168180")
+    
+    # Test 5: Fetch persons
+    # ─────────────────────────────────────────────
+    print("\n" + "─"*60)
+    print("Test 5: Fetch Persons")
+    print("─"*60)
+    persons = client.get_persons(page=1, size=5)
+    
+    # ─────────────────────────────────────────────
+    print("\n" + "="*60)
+    print("✅ All tests completed!")
+    print("="*60)
+    print("\n💡 NEXT STEPS:")
+    print("   - Modify the tests above to match your use case")
+    print("   - Add more endpoints as needed")
+    print("   - Use this as a test/debugging tool like Postman")
+    print("\n")
