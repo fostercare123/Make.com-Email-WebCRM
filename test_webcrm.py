@@ -16,7 +16,7 @@ import json
 from typing import Optional, Dict, Any
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # Configuration
 BASE_URL = os.getenv("WEBCRM_BASE_URL", "").strip()
@@ -30,7 +30,7 @@ if not BASE_URL or not TOKEN:
     print("  WEBCRM_TOKEN=your-36-character-token-here")
     sys.exit(1)
 
-# ────────────────────────────────────────────────
+# ========================================================
 # API Client Class
 class WebCRMClient:
     """Simple WebCRM API client for testing endpoints"""
@@ -63,6 +63,32 @@ class WebCRMClient:
             if response_text and len(response_text) < 500:
                 print(f"   {response_text[:500]}")
     
+    def _get_access_token(self) -> Optional[str]:
+        """Get access token from API using the auth code"""
+        try:
+            url = f"{self.base_url}/Auth/ApiLogin"
+            if self.debug:
+                print(f"\n  🔑 Requesting access token with authCode: {self.token[:16]}...")
+            response = requests.post(url, data={"authCode": self.token}, timeout=15)
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                access_token = token_data.get("AccessToken")
+                if access_token:
+                    self._print_debug("Auth", "Access token obtained successfully")
+                    return access_token
+                else:
+                    print(f"❌ No AccessToken in response: {token_data}")
+                    return None
+            else:
+                print(f"❌ Auth failed with status {response.status_code}: {response.text}")
+                return None
+        except Exception as e:
+            print(f"❌ Failed to get access token: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
     def _make_request(
         self,
         method: str,
@@ -76,14 +102,24 @@ class WebCRMClient:
         try:
             self._print_request(method, url)
             
+            # Get fresh access token for each request
+            access_token = self._get_access_token()
+            if not access_token:
+                print("❌ Failed to obtain access token")
+                return None
+            
+            # Update headers with the new access token
+            headers = self.headers.copy()
+            headers["Authorization"] = f"Bearer {access_token}"
+            
             if method.upper() == "GET":
-                response = requests.get(url, headers=self.headers, params=params, timeout=15)
+                response = requests.get(url, headers=headers, params=params, timeout=15)
             elif method.upper() == "POST":
-                response = requests.post(url, headers=self.headers, json=data, timeout=15)
+                response = requests.post(url, headers=headers, json=data, timeout=15)
             elif method.upper() == "PUT":
-                response = requests.put(url, headers=self.headers, json=data, timeout=15)
+                response = requests.put(url, headers=headers, json=data, timeout=15)
             elif method.upper() == "DELETE":
-                response = requests.delete(url, headers=self.headers, timeout=15)
+                response = requests.delete(url, headers=headers, timeout=15)
             else:
                 print(f"❌ Unsupported HTTP method: {method}")
                 return None
@@ -114,7 +150,7 @@ class WebCRMClient:
             print(f"❌ Invalid JSON response: {str(e)}")
             return None
     
-    # ────────────────────────────────────────────────
+    # ========================================================
     # API Methods (Examples)
     
     def get_organisations(self, page: int = 1, size: int = 20) -> Optional[list]:
@@ -170,7 +206,7 @@ class WebCRMClient:
         result = self.get_organisations(size=1)
         return result is not None
 
-# ────────────────────────────────────────────────
+# ========================================================
 # Example Usage
 if __name__ == "__main__":
     print("\n" + "="*60)
@@ -184,10 +220,10 @@ if __name__ == "__main__":
     client = WebCRMClient(BASE_URL, TOKEN, debug=True)
     
     # Test 1: Connection test
-    # ─────────────────────────────────────────────
-    print("\n" + "─"*60)
+    # -------------------------------------------------
+    print("\n" + "-"*60)
     print("Test 1: Connection Test")
-    print("─"*60)
+    print("-"*60)
     if client.test_connection():
         print("✅ Connection successful!\n")
     else:
@@ -195,34 +231,34 @@ if __name__ == "__main__":
         sys.exit(1)
     
     # Test 2: Fetch organisations
-    # ─────────────────────────────────────────────
-    print("\n" + "─"*60)
+    # -------------------------------------------------
+    print("\n" + "-"*60)
     print("Test 2: Fetch Organisations")
     print("─"*60)
     organisations = client.get_organisations(page=1, size=5)
     
     # Test 3: Fetch opportunities
-    # ─────────────────────────────────────────────
-    print("\n" + "─"*60)
+    # -------------------------------------------------
+    print("\n" + "-"*60)
     print("Test 3: Fetch Opportunities")
     print("─"*60)
     opportunities = client.get_opportunities(page=1, size=5)
     
     # Test 4: Fetch specific opportunity (ID 168180 from example file)
-    # ─────────────────────────────────────────────
-    print("\n" + "─"*60)
+    # -------------------------------------------------
+    print("\n" + "-"*60)
     print("Test 4: Fetch Specific Opportunity (ID: 168180)")
     print("─"*60)
     opportunity = client.get_opportunity_by_id("168180")
     
     # Test 5: Fetch persons
-    # ─────────────────────────────────────────────
-    print("\n" + "─"*60)
+    # -------------------------------------------------
+    print("\n" + "-"*60)
     print("Test 5: Fetch Persons")
     print("─"*60)
     persons = client.get_persons(page=1, size=5)
     
-    # ─────────────────────────────────────────────
+    # -------------------------------------------------
     print("\n" + "="*60)
     print("✅ All tests completed!")
     print("="*60)

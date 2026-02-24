@@ -45,6 +45,7 @@ MANIFEST
 .pytest_cache/
 .coverage
 htmlcov/
+CURRENT PROBLEMS.txt
 
 # Logs
 *.log
