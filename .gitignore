@@ -1,0 +1,11 @@
+# === Python & Credentials ===
+# Protect sensitive credentials and local environment settings
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+.venv/
+env/
+venv/
