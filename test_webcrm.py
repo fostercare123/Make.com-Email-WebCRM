@@ -32,15 +32,42 @@ if not BASE_URL or not TOKEN:
 
 # ========================================================
 # API Client Class
+# ========================================================
 class WebCRMClient:
-    """Simple WebCRM API client for testing endpoints"""
+    """
+    Simple WebCRM API client for testing endpoints.
+    
+    This client handles WebCRM's 2-step authentication automatically:
+    - You provide an authCode (from WebCRM Settings → API)
+    - The client exchanges it for an AccessToken behind the scenes
+    - You just call methods like get_organisations() and it works!
+    
+    Example:
+        client = WebCRMClient(
+            "https://api.webcrm.com", 
+            "your-auth-code-here",
+            debug=True  # Shows detailed request/response info
+        )
+        companies = client.get_organisations(page=1, size=20)
+    
+    All methods automatically handle authentication - you never need to
+    think about access tokens manually!
+    """
     
     def __init__(self, base_url: str, token: str, debug: bool = True):
+        """
+        Initialize the WebCRM client.
+        
+        Args:
+            base_url: WebCRM API base URL (e.g., "https://api.webcrm.com")
+            token: Your authCode from WebCRM Settings → API
+            debug: If True, prints detailed request/response information
+        """
         self.base_url = base_url.rstrip("/")
         self.token = token.strip()
         self.debug = debug
         self.headers = {
-            "Authorization": f"Bearer {self.token}",
+            "Authorization": f"Bearer {self.token}",  # Replaced dynamically per request
             "Accept": "application/json",
             "Content-Type": "application/json"
         }
@@ -64,24 +91,40 @@ class WebCRMClient:
                 print(f"   {response_text[:500]}")
     
     def _get_access_token(self) -> Optional[str]:
-        """Get access token from API using the auth code"""
+        """
+        Get access token from WebCRM API using the authCode.
+        
+        WebCRM uses 2-step authentication:
+        1. You generate an authCode (API token) in WebCRM Settings → API
+        2. This method exchanges the authCode for a temporary AccessToken
+        3. The AccessToken is used as a Bearer token for actual API calls
+        
+        AccessTokens expire after 3600 seconds (1 hour), so we get a fresh
+        one for each API request to ensure we never hit expiration.
+        
+        Returns:
+            str: The AccessToken to use for API calls, or None if failed
+        """
         try:
             url = f"{self.base_url}/Auth/ApiLogin"
             if self.debug:
-                print(f"\n  🔑 Requesting access token with authCode: {self.token[:16]}...")
+                print(f"\n  🔑 Exchanging authCode for AccessToken (Step 1/2)")
+            
+            # POST the authCode to get an AccessToken
             response = requests.post(url, data={"authCode": self.token}, timeout=15)
             
             if response.status_code == 200:
                 token_data = response.json()
                 access_token = token_data.get("AccessToken")
                 if access_token:
-                    self._print_debug("Auth", "Access token obtained successfully")
+                    self._print_debug("Auth", "✅ AccessToken obtained (valid for 1 hour)")
                     return access_token
                 else:
                     print(f"❌ No AccessToken in response: {token_data}")
                     return None
             else:
                 print(f"❌ Auth failed with status {response.status_code}: {response.text}")
+                print(f"   💡 Check your authCode in .env file")
                 return None
         except Exception as e:
             print(f"❌ Failed to get access token: {str(e)}")
@@ -96,22 +139,42 @@ class WebCRMClient:
         data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
-        """Generic method to make API requests"""
+        """
+        Make an HTTP request to the WebCRM API with automatic authentication.
+        
+        This is the core method that:
+        1. Gets a fresh AccessToken from WebCRM (via _get_access_token)
+        2. Makes the actual API call with the AccessToken as Bearer token
+        3. Returns the JSON response or None if failed
+        
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE)
+            endpoint: API endpoint path (e.g., "/Organisations")
+            data: Request body for POST/PUT (optional)
+            params: URL query parameters (optional)
+            
+        Returns:
+            dict: JSON response data, or None if request failed
+        """
         url = f"{self.base_url}{endpoint}"
         
         try:
             self._print_request(method, url)
             
-            # Get fresh access token for each request
+            # Step 1: Get fresh access token (automatically handles authCode exchange)
             access_token = self._get_access_token()
             if not access_token:
                 print("❌ Failed to obtain access token")
                 return None
             
-            # Update headers with the new access token
+            # Step 2: Use the AccessToken for the actual API call
             headers = self.headers.copy()
             headers["Authorization"] = f"Bearer {access_token}"
             
+            if self.debug:
+                print(f"  🔑 Using AccessToken for {method} request (Step 2/2)")
+            
+            # Make the HTTP request
             if method.upper() == "GET":
                 response = requests.get(url, headers=headers, params=params, timeout=15)
             elif method.upper() == "POST":
@@ -151,10 +214,25 @@ class WebCRMClient:
             return None
     
     # ========================================================
-    # API Methods (Examples)
+    # API Methods - Organisations (Companies)
+    # ========================================================
     
     def get_organisations(self, page: int = 1, size: int = 20) -> Optional[list]:
-        """Fetch organisations"""
+        """
+        Fetch a list of organisations (companies) from WebCRM.
+        
+        Args:
+            page: Page number (1-based, default: 1)
+            size: Number of results per page (default: 20, max: 250)
+            
+        Returns:
+            list: List of organisation dictionaries, or None if failed
+            
+        Example:
+            companies = client.get_organisations(page=1, size=10)
+            for company in companies:
+                print(f"{company['OrganisationId']}: {company['OrganisationName']}")
+        """
         result = self._make_request("GET", "/Organisations", params={"page": page, "size": size})
         if result:
             print(f"✅ Found {len(result)} organisations")
@@ -163,30 +241,96 @@ class WebCRMClient:
         return result
     
     def get_organisation_by_id(self, org_id: str) -> Optional[Dict]:
-        """Fetch a single organisation"""
+        """
+        Fetch a single organisation by its ID.
+        
+        Args:
+            org_id: Organisation ID (as string)
+            
+        Returns:
+            dict: Organisation data, or None if not found
+            
+        Example:
+            company = client.get_organisation_by_id("2")
+            print(f"Company: {company['OrganisationName']}")
+        """
         result = self._make_request("GET", f"/Organisations/{org_id}")
         if result:
             print(f"✅ Organisation retrieved")
             self._print_debug("Name", result.get("OrganisationName", "N/A"))
         return result
     
+    # ========================================================
+    # API Methods - Opportunities (Sales/Deals)
+    # ========================================================
+    
     def get_opportunities(self, page: int = 1, size: int = 20) -> Optional[list]:
-        """Fetch opportunities"""
+        """
+        Fetch a list of opportunities (sales/deals) from WebCRM.
+        
+        Args:
+            page: Page number (1-based, default: 1)
+            size: Number of results per page (default: 20)
+            
+        Returns:
+            list: List of opportunity dictionaries, or None if failed
+            
+        Example:
+            deals = client.get_opportunities(page=1, size=10)
+            for deal in deals:
+                print(f"{deal['OpportunityId']}: {deal['Name']} - ${deal.get('Value', 0)}")
+        """
         result = self._make_request("GET", "/Opportunities", params={"page": page, "size": size})
         if result:
             print(f"✅ Found {len(result)} opportunities")
         return result
     
     def get_opportunity_by_id(self, opp_id: str) -> Optional[Dict]:
-        """Fetch a single opportunity"""
+        """
+        Fetch a single opportunity by its ID.
+        
+        Args:
+            opp_id: Opportunity ID (as string)
+            
+        Returns:
+            dict: Opportunity data, or None if not found
+            
+        Example:
+            deal = client.get_opportunity_by_id("168180")
+            print(f"Deal: {deal['Name']}, Value: {deal.get('Value', 0)}")
+        """
         result = self._make_request("GET", f"/Opportunities/{opp_id}")
         if result:
             print(f"✅ Opportunity retrieved")
             self._print_debug("Title", result.get("Name", "N/A"))
         return result
     
+    
+    # ========================================================
+    # API Methods - Persons (Contacts)
+    # ========================================================
+    
     def get_persons(self, org_id: Optional[str] = None, page: int = 1, size: int = 20) -> Optional[list]:
-        """Fetch persons (optionally filtered by organisation)"""
+        """
+        Fetch a list of persons (contacts) from WebCRM.
+        
+        Args:
+            org_id: Optional organisation ID to filter by (default: None = all persons)
+            page: Page number (1-based, default: 1)
+            size: Number of results per page (default: 20)
+            
+        Returns:
+            list: List of person dictionaries, or None if failed
+            
+        Example:
+            # Get all persons
+            all_contacts = client.get_persons(page=1, size=20)
+            
+            # Get persons in a specific company
+            company_contacts = client.get_persons(org_id="2", page=1, size=20)
+            for person in company_contacts:
+                print(f"{person['PersonFirstName']} {person['PersonLastName']}")
+        """
         endpoint = f"/Organisations/{org_id}/Persons" if org_id else "/Persons"
         result = self._make_request("GET", endpoint, params={"page": page, "size": size})
         if result:
@@ -194,14 +338,47 @@ class WebCRMClient:
         return result
     
     def create_person(self, data: Dict[str, Any]) -> Optional[Dict]:
-        """Create a new person"""
+        """
+        Create a new person (contact) in WebCRM.
+        
+        Args:
+            data: Dictionary containing person data
+                Required fields: FirstName, LastName
+                Optional: Email, Phone, OrganisationId, etc.
+                
+        Returns:
+            dict: Created person data, or None if failed
+            
+        Example:
+            new_person = client.create_person({
+                "FirstName": "John",
+                "LastName": "Doe",
+                "Email": "john.doe@example.com",
+                "Phone": "+45 12 34 56 78",
+                "OrganisationId": "2"
+            })
+            print(f"Created person ID: {new_person['PersonId']}")
+        """
         result = self._make_request("POST", "/Persons", data=data)
         if result:
             print(f"✅ Person created")
         return result
     
+    # ========================================================
+    # Utility Methods
+    # ========================================================
+    
     def test_connection(self) -> bool:
-        """Simple connection test"""
+        """
+        Simple connection test to verify API access.
+        
+        Returns:
+            bool: True if connection successful, False otherwise
+            
+        Example:
+            if client.test_connection():
+                print("Ready to use WebCRM API!")
+        """
         print("\n🔗 Testing API connection...\n")
         result = self.get_organisations(size=1)
         return result is not None
