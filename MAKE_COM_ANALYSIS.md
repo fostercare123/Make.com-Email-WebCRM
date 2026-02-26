@@ -25,11 +25,12 @@ Endpoint: Custom webhook listening for Uniconta updates
 ### Module 11: Get webCRM Access Token ✓
 ```
 POST https://api.webcrm.com/Auth/ApiLogin
-Body: authCode=17a6ee13-aeec-4413-8736-2fee9df2c113
+Body: authCode=={{datastore.authcode}}
 ```
-**Status:** ✅ Correctly configured
+**Status:** ✅ Correctly configured (after moving authCode to Data Store)
 - Proper endpoint
 - Correct Content-Type: `application/x-www-form-urlencoded`
+- Uses Data Store for secure credential storage
 - Returns: `{{11.data.AccessToken}}`
 
 ### Module 13: Update Price ✓ (with caveat)
@@ -71,7 +72,11 @@ QuotationLines Array → Find where QuotationLineData4 == {{2.Item}} → Update 
 
 ## 🔧 Required Fix: Add Iterator/Filter Module
 
-### Option 1: Use Array Iterator (Recommended)
+### 📖 For Step-by-Step Instructions
+
+**See:** [MAKE_COM_REBUILD_GUIDE.md](MAKE_COM_REBUILD_GUIDE.md) ← Detailed walkthrough with screenshots reference!
+
+### Quick Summary
 
 **Add between Module 6 and Module 13:**
 
@@ -81,43 +86,27 @@ QuotationLines Array → Find where QuotationLineData4 == {{2.Item}} → Update 
    - This will process each line one at a time
 
 2. **Add Filter Module** (after Iterator)
-   - Condition: `{{6.QuotationLineData4}}` **equals** `{{2.Item}}`
+   - Condition: `{{item.QuotationLineData4}}` **equals** `{{2.Item}}`
    - This ensures only matching lines proceed to update
 
 3. **Update Module 13:**
    - Change: `{{6.data[].QuotationLineId}}` 
-   - To: `{{6.QuotationLineId}}` (singular, from iterator)
-
-### Option 2: Use Array Functions (Advanced)
-
-Add a **Set Variable** module after Module 6:
-
-```
-Name: MatchingLineId
-Value: {{first(map(6.data; "QuotationLineId"; "QuotationLineData4"; 2.Item))}}
-```
-
-Then in Module 13:
-```
-URL: /QuotationLines/{{MatchingLineId}}
-Body QuotationLineId: {{MatchingLineId}}
-```
+   - To: `{{item.QuotationLineId}}` (singular, from iterator)
 
 ---
 
-## 🔒 Security Recommendation
+## 🔒 Security Recommendation (✅ COMPLETED)
 
 ### URGENT: Remove Hardcoded authCode
 
-Your authCode is visible in the blueprint:
-```
-authCode=17a6ee13-aeec-4413-8736-2fee9df2c113
-```
+Your authCode was hardcoded in the blueprint (now removed).
 
-**Fix:**
-1. Go to Module 11 settings
-2. Replace hardcoded value with a **Variable** or **Datastore** value
-3. Store the authCode in Make.com's **Data Store** or use **Environment Variables**
+**Fix (Already Done!):**
+1. ✅ Created Data Store `API_Credentials`
+2. ✅ Stored authCode securely in Data Store
+3. ✅ Updated Module 11 to use: `authCode={{datastore.authcode}}`
+
+No more hardcoded secrets in your scenario! 🔐
 
 ---
 
@@ -176,6 +165,26 @@ PUT /QuotationLines/15
 ---
 
 ## 📈 Improvements & Optimizations
+
+### 0. Update Module 11 to Use Data Store (Do This First!)
+
+In your Make.com scenario:
+
+**Module 11 → Mapper section:**
+
+Change from:
+```
+authCode: 17a6ee13-aeec-4413-8736-2fee9df2c113 (hardcoded)
+```
+
+Change to:
+```
+authCode: {{datastore.authcode}}
+```
+
+This reads the authCode from your `API_Credentials` data store you created. ✅
+
+---
 
 ### 1. Add Error Handling
 
