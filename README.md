@@ -229,15 +229,44 @@ result = client._make_request(
 )
 ```
 
+### Working with QuotationLines (Advanced)
+
+For price updates and item management, see [complete_implementation.py](complete_implementation.py):
+
+```python
+from complete_implementation import WebCRMClient
+
+client = WebCRMClient()
+
+# Search for quotation line by Uniconta item number
+# Item numbers are stored in QuotationLineData4
+line = client.search_quotation_line_by_item("60900100")
+
+# Update prices
+if line:
+    client.update_quotation_line_price(
+        quotation_line_id=line['QuotationLineId'],
+        new_price=99.99,
+        new_cost_price=49.30
+    )
+```
+
+**💡 For Make.com integration:** See [MAKE_COM_SOLUTION.md](MAKE_COM_SOLUTION.md) for complete guide on syncing Uniconta prices to webCRM.
+
 ## Project Structure
 
 ```
 .
-├── test_webcrm.py          # Main API clien
-├── README.md               # This file
-├── .gitignore              # Git ignore rules
-├── .env                    # Environment variables (not in repo)
-└── requirements.txt        # Python dependencies
+├── test_webcrm.py              # Main API client with reusable WebCRMClient class
+├── complete_implementation.py  # Advanced example: QuotationLines search & update
+├── CHEATSHEET.md               # Quick reference guide
+├── QUICKSTART.md               # 5-minute getting started guide
+├── MAKE_COM_SOLUTION.md        # Make.com integration guide (Uniconta sync)
+├── README.md                   # This file - full documentation
+├── requirements.txt            # Python dependencies
+├── .env.example                # Example environment variables
+├── .env                        # Your credentials (not in repo)
+└── .gitignore                  # Git ignore rules
 ```
 
 ## API Methods Available

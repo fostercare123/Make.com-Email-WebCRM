@@ -71,6 +71,31 @@ for p in contacts:
 
 ---
 
+## 📝 QuotationLines (Advanced)
+
+For working with quotation line items (products with prices):
+
+```python
+# See complete_implementation.py for full example
+from complete_implementation import WebCRMClient
+
+client = WebCRMClient()
+
+# Search for line by item number (stored in QuotationLineData4)
+line = client.search_quotation_line_by_item("60900100")
+
+# Update price
+client.update_quotation_line_price(
+    quotation_line_id=12,
+    new_price=99.99,
+    new_cost_price=49.30
+)
+```
+
+**💡 For Make.com integration:** See [MAKE_COM_SOLUTION.md](MAKE_COM_SOLUTION.md)
+
+---
+
 ## 🔧 Common Patterns
 
 ### Pagination (Get All Results)
