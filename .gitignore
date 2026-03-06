@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Blueprint contains API credentials - keep local only
+*.blueprint.json
+
 # Virtual Environment
 .venv/
 venv/
@@ -58,4 +61,3 @@ Thumbs.db
 *.tmp
 *.bak
 *.swp
-Integration Webhooks.blueprint.fixed.json
