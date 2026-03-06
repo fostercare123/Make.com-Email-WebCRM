@@ -41,7 +41,9 @@ The file `Infomail - webCRM automation.blueprint.json` is a Make.com scenario. Y
 ### Step 3 — Authenticate with webCRM (Module 3: HTTP - ApiLogin)
 
 - **What:** Exchanges the API auth code for a temporary Access Token (valid 1 hour).
-- **Filter:** Only runs if Company Name is not empty (every quote request should have a company).
+- **Filter ("Valid Lead"):** Only runs if **both** conditions are met:
+  1. Company Name is not empty.
+  2. Email Address contains `@` (basic spam/garbage filter).
 - **Result:** All following modules use this Access Token for API calls.
 
 ### Step 4 — Look Up Person by Email (Module 4: HTTP - Query Person by Email)
@@ -52,6 +54,7 @@ The file `Infomail - webCRM automation.blueprint.json` is a Make.com scenario. Y
   FROM Person
   WHERE PersonEmail = '<parsed email>'
   ```
+- **Note:** The email value is SQL-escaped (single quotes replaced with `''`) to prevent query breakage.
 - **Result:** Returns matching person(s), or an empty array if the email is new.
 
 ### Step 5 — Router (Module 5)
@@ -89,11 +92,15 @@ This is the main decision point. It branches into **two routes** based on whethe
 
 #### Module 12: Router — Is it a "Spare parts request" organisation?
 
-**Route B1 — NOT "Spare parts request" (regular existing contact):**
+**Route B1 — NOT "Spare parts request" AND different company (contact changing companies):**
 
-> *"Person exists and belongs to a real company. Create a new contact under the correct company."*
+> *"Person exists at a real company, but the email's company name is different — they may have moved. Create a new contact under the new company."*
 
 - **Module 18: Query Org by Name** — Looks up the company name from the email.
+  - **Filter ("NOT Spare Parts AND Different Company"):** Only proceeds if **both**:
+    1. Current org ≠ "Spare parts request"
+    2. Current org ≠ email's company name (case-insensitive comparison)
+  - **If the person is already at the same company as in the email, this route is blocked → no duplicate contact created.**
 - **Module 21: Router:**
   - **Module 22 + 23:** Company not found → Create new company + contact.
   - **Module 19:** Company found → Create contact under existing company.
@@ -115,25 +122,28 @@ This is the main decision point. It branches into **two routes** based on whethe
 ```
 Email arrives
   └─ Parse: Name, Email, Phone, Company, Country
-       └─ Authenticate with webCRM API
-            └─ Query: Does this email already exist in webCRM?
-                 │
-                 ├─ NO (Route A) ──── Query: Does the company exist?
-                 │                       ├─ NO  → Create Company + Create Contact
-                 │                       └─ YES → Create Contact under existing company
-                 │
-                 └─ YES (Route B) ── Get person's current organisation
-                                        │
-                                        ├─ NOT "Spare parts request" (Route B1)
-                                        │     └─ Query: Does the (new) company exist?
-                                        │          ├─ NO  → Create Company + Create Contact
-                                        │          └─ YES → Create Contact under existing company
-                                        │
-                                        └─ IS "Spare parts request" (Route B2)
-                                              └─ Mark old contact as Resigned
-                                                   └─ Query: Does the (new) company exist?
-                                                        ├─ NO  → Create Company + Create Contact
-                                                        └─ YES → Create Contact under existing company
+       └─ Valid lead? (has company + email contains @)
+            └─ Authenticate with webCRM API
+                 └─ Query: Does this email already exist in webCRM?
+                      │
+                      ├─ NO (Route A) ──── Query: Does the company exist?
+                      │                       ├─ NO  → Create Company + Create Contact
+                      │                       └─ YES → Create Contact under existing company
+                      │
+                      └─ YES (Route B) ── Get person's current organisation
+                                             │
+                                             ├─ Same company as email? → STOP (no action, no duplicates)
+                                             │
+                                             ├─ Different real company (Route B1)
+                                             │     └─ Query: Does the (new) company exist?
+                                             │          ├─ NO  → Create Company + Create Contact
+                                             │          └─ YES → Create Contact under existing company
+                                             │
+                                             └─ IS "Spare parts request" (Route B2)
+                                                   └─ Mark old contact as Resigned
+                                                        └─ Query: Does the (new) company exist?
+                                                             ├─ NO  → Create Company + Create Contact
+                                                             └─ YES → Create Contact under existing company
 ```
 
 ---
@@ -197,6 +207,42 @@ These scripts are **not** part of the live automation. They are developer tools 
 - **Organisation** = Company (has an `OrganisationId` and `OrganisationName`)
 - **Person** = Contact (has a `PersonId`, `PersonEmail`, linked to an Organisation via `PersonOrganisationId`)
 - **"Spare parts request"** = A special catch-all company for unassigned contacts. The automation moves people out of it when they submit a real quote.
+
+---
+
+## API Findings
+
+These were discovered during development and are worth knowing:
+
+- **Company name matching is case-insensitive.** webCRM's `=` operator in `/Queries` treats `'tekniko'`, `'Tekniko'`, and `'TEKNIKO'` identically. No `LOWER()`/`UPPER()` wrapper needed.
+- **`/Persons?PersonEmail=` does NOT filter.** Only `/Persons/Search?term=` and `/Queries` with a SQL `WHERE` clause actually work for email lookups.
+- **"Resigned" is only set on "Spare parts request" contacts.** Contacts at real companies are never modified — only new contacts are created alongside them.
+
+---
+
+## Changelog
+
+### 2026-03-06 — Dedup & safety hardening
+
+**Problem:** Sending two identical emails created duplicate contacts under the same company.
+
+**Changes made to the blueprint:**
+
+1. **Module 3 filter — added email validation.**
+   - Old: only checked company name ≠ empty.
+   - New: also requires email contains `@`. Blocks spam/garbage before any API calls.
+
+2. **Module 4 — SQL-escaped email value.**
+   - The person-lookup query now escapes single quotes in the email (`'` → `''`), matching how company-name queries were already handled.
+
+3. **Module 18 filter — added same-company dedup guard (Route B1).**
+   - Old: only checked org ≠ "Spare parts request".
+   - New: also checks org ≠ email's company name (case-insensitive). If the person is already at the correct company, the route is blocked → no duplicate contact.
+
+**Not changed (by design):**
+
+- **No auto-update of existing contacts.** When a known person re-submits from the same company, the automation does nothing. This is intentional — updating fields (phone, name) from inbound email could overwrite good data with spam data.
+- **No "Resigned" on real-company contacts.** Only contacts under the fake "Spare parts request" company get marked Resigned when reorganized. Contacts at real companies are left untouched.
 
 ### The `/Queries` Endpoint
 The Make.com automation uses webCRM's `/Queries` endpoint which accepts SQL-like queries:

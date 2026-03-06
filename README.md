@@ -92,17 +92,19 @@ See [api-tools/README.md](api-tools/README.md) for details on every script.
 ```
 Email arrives
   └─ Parse: Name, Email, Phone, Company, Country
-       └─ Authenticate with webCRM API
-            └─ Does this email exist in webCRM?
-                 │
-                 ├─ NO → Does the company exist?
-                 │         ├─ NO  → Create Company + Create Contact
-                 │         └─ YES → Create Contact under existing company
-                 │
-                 └─ YES → Is the contact in "Spare parts request"?
-                            ├─ NO  → Create Contact under correct company
-                            └─ YES → Mark old contact Resigned,
-                                     Create Company (if new) + Create Contact
+       └─ Valid lead? (has company + email contains @)
+            └─ Authenticate with webCRM API
+                 └─ Does this email exist in webCRM?
+                      │
+                      ├─ NO → Does the company exist?
+                      │         ├─ NO  → Create Company + Create Contact
+                      │         └─ YES → Create Contact under existing company
+                      │
+                      └─ YES → Same company as in email?
+                               ├─ YES → STOP (already correct, no duplicates)
+                               ├─ NO, real company → Create Contact under new company
+                               └─ "Spare parts request" → Mark old Resigned,
+                                    Create Company (if new) + Create Contact
 ```
 
 Full details with every module ID: [MODULE_NOTES.md](MODULE_NOTES.md)
@@ -129,6 +131,17 @@ Full details with every module ID: [MODULE_NOTES.md](MODULE_NOTES.md)
 | Email not being processed | Check subject is exactly `"a quote request"` or `"request from website"` |
 | Contact created under wrong company | Verify company name spelling matches between email and webCRM |
 | `.env` not loading | Ensure it's in the project root, named exactly `.env` (not `.env.txt`) |
+
+---
+
+## Safety & Anti-Spam
+
+- **Email validation:** Emails without `@` in the address are rejected before any API calls.
+- **Duplicate contacts:** If a person emails again from the same company, the automation stops — no duplicate contact created.
+- **Existing data is never overwritten:** The automation only *creates* new records. It never updates names, phones, or other fields on existing contacts (protects against spam polluting real data).
+- **"Resigned" only on fake bucket:** Only contacts under "Spare parts request" are marked Resigned. Real-company contacts are never modified.
+- **Company matching is case-insensitive:** "tekniko", "TEKNIKO", and "Tekniko" all resolve to the same company — no accidental duplicates.
+- **SQL injection safe:** All user-provided values (email, company name) are escaped before being used in SQL queries.
 
 ---
 
