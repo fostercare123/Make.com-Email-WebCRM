@@ -203,8 +203,22 @@ The Make.com automation stopped silently at Module 2 (Text Parser). Module 2 sho
 Full[ \t]*Name[ \t]*\n+[ \t]*(\S+)[ \t]*(.*?)[ \t]*\n+[ \t]*Email[ \t]*Address[ \t]*\n+[ \t]*(\S+@\S+)[\s\S]*?\n[ \t]*Phone[ \t]*\n+[ \t]*(.*?)[ \t]*\n+[ \t]*Compan[ \t]*y[ \t]*Name[ \t]*\n+[ \t]*(.*?)[ \t]*\n+[ \t]*Country[ \t]*\n+[ \t]*(.*?)[ \t]*\n
 ```
 
+**5. Duplicate contact creation — wrong module reference in filter**
+- When a person already existed in webCRM (Route B "Email Found"), the scenario still created a duplicate contact every time.
+- **Root cause:** Module 14's filter "NOT Spare Parts AND Different Company" compared `{{11.data.OrganisationName}}` to the email's company name — but Module 11 is in the "Email Not Found" branch (Route A) and never runs in Route B. Its value was always empty/null, so the "different company" check was always true.
+- **Fix:** Changed `11.data.OrganisationName` → `12.data.OrganisationName` (Module 12 = "Get Person's Organisation", which actually runs in Route B and returns the person's current company).
+- Now: same person + same company → filter blocks → no duplicate. Only proceeds when the person has genuinely moved to a different company.
+
+### Full blueprint audit
+After the Module 14 fix, audited all 26 module data references (`{{N.data...}}`) across the entire blueprint. All other references are correct — each module only references modules that run upstream in the same branch.
+
+**Three edge cases noted (not bugs, design choices):**
+1. If a person exists with `OrganisationId = 0` (no company), Module 12 calls `/Organisations/0` which would error. Unlikely since Module 3 already filters out empty companies.
+2. Multiple people with the same email: only the first match (`data[1]`) is used.
+3. No update path for existing contacts at the same company — phone/name changes are silently ignored.
+
 ### Files Changed
-- `Infomail - webCRM automation.blueprint.json` — Module 2 regex pattern + mapper expression
+- `Infomail - webCRM automation.blueprint.json` — Module 2 regex pattern + mapper expression, Module 14 filter fix
 - `CHANGELOG.md` — Created (this file)
 
 ### What I Learned
@@ -213,6 +227,7 @@ Full[ \t]*Name[ \t]*\n+[ \t]*(\S+)[ \t]*(.*?)[ \t]*\n+[ \t]*Email[ \t]*Address[ 
 - HTML-only emails have no `text` MIME part — must fall back to `stripHtml(html)`.
 - Mojibake happens when UTF-8 bytes are read as Latin-1. When you can't re-encode programmatically, a chain of `replace()` calls is a valid workaround.
 - How to debug Make.com modules: green doesn't mean "it worked" — it means "no error". Zero output bundles means the match/filter silently rejected the input.
+- Cross-branch module references are a silent killer — a filter referencing a module from a different route gets null data, making the condition always pass (or always fail). Always verify that `{{N.data}}` points to a module in the **same execution path**.
 
 ### Known Limitation
 Uppercase letters whose UTF-8 second byte is a C1 control character (0x80–0x9F) may have that byte stripped by the email pipeline. If an uppercase Å, Æ, or Ø appears as a lone `Ã` at the end of a field, it means the second byte was lost upstream. The permanent fix for this would be correcting the `Content-Type` charset header on the TYPO3 website's outgoing emails.
