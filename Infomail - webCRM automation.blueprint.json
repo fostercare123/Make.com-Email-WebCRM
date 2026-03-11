@@ -1,0 +1,1506 @@
+{
+    "name": "Infomail > webCRM automation",
+    "flow": [
+        {
+            "id": 1,
+            "module": "email:TriggerNewEmail",
+            "version": 7,
+            "parameters": {
+                "to": "",
+                "from": "",
+                "text": "",
+                "folder": "INBOX",
+                "account": 5785042,
+                "subject": "",
+                "criteria": "UNSEEN",
+                "markSeen": false,
+                "maxResults": 10
+            },
+            "mapper": {},
+            "metadata": {
+                "designer": {
+                    "x": 0,
+                    "y": 750
+                },
+                "restore": {
+                    "parameters": {
+                        "folder": {
+                            "path": [
+                                "INBOX"
+                            ]
+                        },
+                        "account": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "microsoft-smtp-imap"
+                            },
+                            "label": "Info@eilersen.com (info@eilersen.com)"
+                        },
+                        "criteria": {
+                            "label": "Only Unread emails"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "account",
+                        "type": "account:imap,google-restricted,microsoft-smtp-imap",
+                        "label": "Connection",
+                        "required": true
+                    },
+                    {
+                        "name": "criteria",
+                        "type": "select",
+                        "label": "Criteria",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "ALL",
+                                "SEEN",
+                                "UNSEEN"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "type": "email",
+                        "label": "Sender email address"
+                    },
+                    {
+                        "name": "to",
+                        "type": "email",
+                        "label": "Recipient email address"
+                    },
+                    {
+                        "name": "subject",
+                        "type": "text",
+                        "label": "Subject"
+                    },
+                    {
+                        "name": "text",
+                        "type": "text",
+                        "label": "Phrase"
+                    },
+                    {
+                        "name": "markSeen",
+                        "type": "boolean",
+                        "label": "Mark message(s) as read when fetched"
+                    },
+                    {
+                        "name": "maxResults",
+                        "type": "number",
+                        "label": "Maximum number of results"
+                    },
+                    {
+                        "name": "folder",
+                        "type": "folder",
+                        "label": "Folder",
+                        "required": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 2,
+            "module": "regexp:Parser",
+            "version": 1,
+            "parameters": {
+                "global": false,
+                "pattern": "Full\\s+Name\\s*:\\s*(\\S+)\\s+(.*?)\\nEmail\\s+Address\\s*:\\s*(.*?)\\nPhone\\s*:\\s*(.*?)\\nCompany\\s+Name\\s*:\\s*(.*?)\\nCountry\\s*:\\s*(.*?)\\n",
+                "multiline": true,
+                "sensitive": false,
+                "singleline": false,
+                "continueWhenNoRes": false
+            },
+            "filter": {
+                "name": "Subject filter from Website Requests",
+                "conditions": [
+                    [
+                        {
+                            "a": "{{lower(trim(toString(1.subject)))}}",
+                            "b": "a quote request",
+                            "o": "text:equal"
+                        }
+                    ],
+                    [
+                        {
+                            "a": "{{lower(trim(toString(1.subject)))}}",
+                            "b": "request from website",
+                            "o": "text:equal"
+                        }
+                    ]
+                ]
+            },
+            "mapper": {
+                "text": "{{replace(replace(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(if(length(1.text) > 0; toString(1.text); toString(stripHtml(1.html))); \"Ã¸\"; \"ø\"); \"Ã¥\"; \"å\"); \"Ã¦\"; \"æ\"); \"Ã©\"; \"é\"); \"Ã¼\"; \"ü\"); \"Ã¶\"; \"ö\"); \"Ã¤\"; \"ä\"); \"Ã±\"; \"ñ\"); \"Ã§\"; \"ç\"); \"Ã¢\"; \"â\"); \"Ã«\"; \"ë\"); \"Ã¯\"; \"ï\"); \"Ã¬\"; \"ì\"); \"Ã³\"; \"ó\"); \"Ã²\"; \"ò\"); \"Ã¹\"; \"ù\"); \"Ã½\"; \"ý\"); \"Ã¡\"; \"á\"); \"Ã­\"; \"í\"); \"Ã°\"; \"ð\"); \"Ãº\"; \"ú\"); \"Ã\"; \"Å\"); \"Ã\"; \"Æ\"); \"Ã\"; \"Ø\"); \"Ã\"; \"É\"); \"Ã\"; \"Ö\"); \"Ã\"; \"Ü\"); \"Ã\"; \"Ä\"); \"Ã\"; \"Ñ\"); \"Ã\"; \"À\"); \"Ã\"; \"Ç\")); \"\\r\\n\"; \"\\n\"); \"\\r\"; \"\\n\")}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 300,
+                    "y": 750,
+                    "name": "Text Parser - Match Pattern"
+                },
+                "restore": {},
+                "parameters": [
+                    {
+                        "name": "pattern",
+                        "type": "text",
+                        "label": "Pattern",
+                        "required": true
+                    },
+                    {
+                        "name": "global",
+                        "type": "boolean",
+                        "label": "Global match",
+                        "required": true
+                    },
+                    {
+                        "name": "sensitive",
+                        "type": "boolean",
+                        "label": "Case sensitive",
+                        "required": true
+                    },
+                    {
+                        "name": "multiline",
+                        "type": "boolean",
+                        "label": "Multiline",
+                        "required": true
+                    },
+                    {
+                        "name": "singleline",
+                        "type": "boolean",
+                        "label": "Singleline",
+                        "required": true
+                    },
+                    {
+                        "name": "continueWhenNoRes",
+                        "type": "boolean",
+                        "label": "Continue the execution of the route even if the module finds no matches",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "text",
+                        "type": "text",
+                        "label": "Text"
+                    }
+                ],
+                "interface": [
+                    {
+                        "name": "$1",
+                        "type": "text",
+                        "label": "$1"
+                    },
+                    {
+                        "name": "$2",
+                        "type": "text",
+                        "label": "$2"
+                    },
+                    {
+                        "name": "$3",
+                        "type": "text",
+                        "label": "$3"
+                    },
+                    {
+                        "name": "$4",
+                        "type": "text",
+                        "label": "$4"
+                    },
+                    {
+                        "name": "$5",
+                        "type": "text",
+                        "label": "$5"
+                    },
+                    {
+                        "name": "$6",
+                        "type": "text",
+                        "label": "$6"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 3,
+            "module": "datastore:GetRecord",
+            "version": 1,
+            "parameters": {
+                "datastore": 100642
+            },
+            "filter": {
+                "name": "Valid Lead (Company + Email)",
+                "conditions": [
+                    [
+                        {
+                            "a": "{{trim(toString(2.$5))}}",
+                            "b": "",
+                            "o": "text:notequal"
+                        },
+                        {
+                            "a": "{{trim(toString(2.$3))}}",
+                            "b": "@",
+                            "o": "text:contain"
+                        }
+                    ]
+                ]
+            },
+            "mapper": {
+                "key": "b514473da2fe",
+                "returnWrapped": false
+            },
+            "metadata": {
+                "designer": {
+                    "x": 655,
+                    "y": 752
+                },
+                "restore": {
+                    "parameters": {
+                        "datastore": {
+                            "label": "WebCRMSecrets"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "datastore",
+                        "type": "datastore",
+                        "label": "Data store",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "key",
+                        "type": "text",
+                        "label": "Key",
+                        "required": true
+                    },
+                    {
+                        "name": "returnWrapped",
+                        "type": "boolean",
+                        "label": "Return Wrapped Output",
+                        "required": true
+                    }
+                ],
+                "interface": [
+                    {
+                        "help": "",
+                        "name": "authCode",
+                        "type": "text",
+                        "label": null,
+                        "default": null,
+                        "required": true,
+                        "multiline": false
+                    }
+                ]
+            }
+        },
+        {
+            "id": 4,
+            "module": "http:MakeRequest",
+            "version": 4,
+            "parameters": {
+                "tlsType": "",
+                "proxyKeychain": "",
+                "authenticationType": "noAuth"
+            },
+            "mapper": {
+                "url": "https://api.webcrm.com/Auth/ApiLogin",
+                "method": "post",
+                "headers": [
+                    {
+                        "name": "Content-Type",
+                        "value": "application/x-www-form-urlencoded"
+                    }
+                ],
+                "contentType": "urlEncoded",
+                "shareCookies": false,
+                "parseResponse": true,
+                "allowRedirects": true,
+                "stopOnHttpError": true,
+                "urlEncodedBodyContent": [
+                    {
+                        "name": "authCode",
+                        "value": "{{3.authCode}}"
+                    }
+                ],
+                "requestCompressedContent": true
+            },
+            "metadata": {
+                "designer": {
+                    "x": 900,
+                    "y": 750,
+                    "name": "ApiLogin"
+                },
+                "restore": {
+                    "expect": {
+                        "method": {
+                            "mode": "chose",
+                            "label": "POST"
+                        },
+                        "headers": {
+                            "mode": "chose",
+                            "items": [
+                                null
+                            ]
+                        },
+                        "contentType": {
+                            "label": "application/x-www-form-urlencodedEnter form data as key-value pairs encoded in the URL style."
+                        },
+                        "shareCookies": {
+                            "mode": "chose"
+                        },
+                        "parseResponse": {
+                            "mode": "chose"
+                        },
+                        "allowRedirects": {
+                            "mode": "chose"
+                        },
+                        "paginationType": {
+                            "label": "Empty"
+                        },
+                        "queryParameters": {
+                            "mode": "chose"
+                        },
+                        "stopOnHttpError": {
+                            "mode": "chose"
+                        },
+                        "urlEncodedBodyContent": {
+                            "mode": "chose",
+                            "items": [
+                                null
+                            ]
+                        },
+                        "requestCompressedContent": {
+                            "mode": "chose"
+                        }
+                    },
+                    "parameters": {
+                        "tlsType": {
+                            "label": "Empty"
+                        },
+                        "proxyKeychain": {
+                            "label": "Choose a key"
+                        },
+                        "authenticationType": {
+                            "label": "No authenticationUse when no credentials are required for the request."
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "authenticationType",
+                        "type": "select",
+                        "label": "Authentication type",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "noAuth",
+                                "apiKey",
+                                "basicAuth",
+                                "oAuth"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tlsType",
+                        "type": "select",
+                        "label": "Transport layer security (TLS)",
+                        "validate": {
+                            "enum": [
+                                "mTls",
+                                "tls"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "proxyKeychain",
+                        "type": "keychain:proxy",
+                        "label": "Proxy"
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "url",
+                        "type": "url",
+                        "label": "URL",
+                        "required": true
+                    },
+                    {
+                        "name": "method",
+                        "type": "select",
+                        "label": "Method",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "get",
+                                "head",
+                                "post",
+                                "put",
+                                "patch",
+                                "delete",
+                                "options"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "headers",
+                        "spec": {
+                            "name": "value",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true,
+                                    "validate": {
+                                        "pattern": "^[-!#$%&'*+.^_`|~0-9A-Za-z]+$"
+                                    }
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "text",
+                                    "label": "Value"
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Header"
+                        },
+                        "type": "array",
+                        "label": "Headers"
+                    },
+                    {
+                        "name": "queryParameters",
+                        "spec": {
+                            "name": "value",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "text",
+                                    "label": "Value"
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Parameter"
+                        },
+                        "type": "array",
+                        "label": "Query parameters"
+                    },
+                    {
+                        "name": "contentType",
+                        "type": "select",
+                        "label": "Body content type",
+                        "validate": {
+                            "enum": [
+                                "json",
+                                "multipart",
+                                "urlEncoded",
+                                "custom"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "parseResponse",
+                        "type": "boolean",
+                        "label": "Parse response",
+                        "required": true
+                    },
+                    {
+                        "name": "stopOnHttpError",
+                        "type": "boolean",
+                        "label": "Return error if HTTP request fails",
+                        "required": true
+                    },
+                    {
+                        "name": "timeout",
+                        "type": "uinteger",
+                        "label": "Timeout",
+                        "validate": {
+                            "max": 300,
+                            "min": 1
+                        }
+                    },
+                    {
+                        "name": "allowRedirects",
+                        "type": "boolean",
+                        "label": "Allow redirects",
+                        "required": true
+                    },
+                    {
+                        "name": "shareCookies",
+                        "type": "boolean",
+                        "label": "Share cookies with other HTTP modules",
+                        "required": true
+                    },
+                    {
+                        "name": "requestCompressedContent",
+                        "type": "boolean",
+                        "label": "Request compressed content",
+                        "required": true
+                    },
+                    {
+                        "name": "urlEncodedBodyContent",
+                        "spec": {
+                            "name": "value",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "text",
+                                    "label": "Value"
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Field"
+                        },
+                        "type": "array",
+                        "label": "Body content",
+                        "required": true
+                    },
+                    {
+                        "name": "paginationType",
+                        "type": "select",
+                        "label": "Pagination type",
+                        "validate": {
+                            "enum": [
+                                "offsetBased",
+                                "pageBased",
+                                "urlBased",
+                                "tokenBased"
+                            ]
+                        }
+                    }
+                ],
+                "interface": [
+                    {
+                        "name": "data",
+                        "type": "any",
+                        "label": "Data"
+                    },
+                    {
+                        "name": "statusCode",
+                        "type": "number",
+                        "label": "Status Code"
+                    },
+                    {
+                        "name": "headers",
+                        "spec": [
+                            {
+                                "name": "content-length",
+                                "type": "text",
+                                "label": "Content-Length"
+                            },
+                            {
+                                "name": "content-encoding",
+                                "type": "text",
+                                "label": "Content-Encoding"
+                            },
+                            {
+                                "name": "content-type",
+                                "type": "text",
+                                "label": "Content-Type"
+                            },
+                            {
+                                "name": "server",
+                                "type": "text",
+                                "label": "Server"
+                            },
+                            {
+                                "name": "cache-control",
+                                "type": "text",
+                                "label": "Cache-Control"
+                            },
+                            {
+                                "name": "set-cookie",
+                                "spec": {
+                                    "type": "text"
+                                },
+                                "type": "array",
+                                "label": "Set-Cookie"
+                            }
+                        ],
+                        "type": "collection",
+                        "label": "Headers"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 5,
+            "module": "http:MakeRequest",
+            "version": 4,
+            "parameters": {
+                "tlsType": "",
+                "proxyKeychain": "",
+                "authenticationType": "noAuth"
+            },
+            "mapper": {
+                "url": "https://api.webcrm.com/Queries",
+                "method": "get",
+                "headers": [
+                    {
+                        "name": "Authorization",
+                        "value": "Bearer {{4.data.AccessToken}}"
+                    },
+                    {
+                        "name": "Content-Type",
+                        "value": "application/json; charset=utf-8"
+                    }
+                ],
+                "shareCookies": false,
+                "parseResponse": true,
+                "allowRedirects": true,
+                "queryParameters": [
+                    {
+                        "name": "script",
+                        "value": "SELECT PersonId, PersonEmail, PersonOrganisationId FROM Person WHERE PersonEmail = '{{replace(lower(trim(toString(2.$3))); \"'\"; \"''\")}}'"
+                    },
+                    {
+                        "name": "Size",
+                        "value": "10"
+                    }
+                ],
+                "stopOnHttpError": true,
+                "requestCompressedContent": true
+            },
+            "metadata": {
+                "designer": {
+                    "x": 1200,
+                    "y": 750,
+                    "name": "Query Person by Email"
+                }
+            }
+        },
+        {
+            "id": 6,
+            "module": "builtin:BasicRouter",
+            "version": 1,
+            "mapper": null,
+            "metadata": {
+                "designer": {
+                    "x": 1500,
+                    "y": 750
+                }
+            },
+            "routes": [
+                {
+                    "flow": [
+                        {
+                            "id": 7,
+                            "module": "http:MakeRequest",
+                            "version": 4,
+                            "parameters": {
+                                "tlsType": "",
+                                "proxyKeychain": "",
+                                "authenticationType": "noAuth"
+                            },
+                            "filter": {
+                                "name": "Email Not Found",
+                                "conditions": [
+                                    [
+                                        {
+                                            "a": "{{length(5.data)}}",
+                                            "b": "0",
+                                            "o": "number:equal"
+                                        }
+                                    ]
+                                ]
+                            },
+                            "mapper": {
+                                "url": "https://api.webcrm.com/Queries",
+                                "method": "get",
+                                "headers": [
+                                    {
+                                        "name": "Authorization",
+                                        "value": "Bearer {{4.data.AccessToken}}"
+                                    },
+                                    {
+                                        "name": "Content-Type",
+                                        "value": "application/json; charset=utf-8"
+                                    }
+                                ],
+                                "shareCookies": false,
+                                "parseResponse": true,
+                                "allowRedirects": true,
+                                "queryParameters": [
+                                    {
+                                        "name": "script",
+                                        "value": "SELECT OrganisationId, OrganisationName FROM Organisation WHERE OrganisationName = '{{replace(trim(toString(2.$5)); \"'\"; \"''\")}}'"
+                                    },
+                                    {
+                                        "name": "Size",
+                                        "value": "10"
+                                    }
+                                ],
+                                "stopOnHttpError": true,
+                                "requestCompressedContent": true
+                            },
+                            "metadata": {
+                                "designer": {
+                                    "x": 1717,
+                                    "y": 219,
+                                    "name": "Query Org by Name"
+                                }
+                            }
+                        },
+                        {
+                            "id": 8,
+                            "module": "builtin:BasicRouter",
+                            "version": 1,
+                            "mapper": null,
+                            "metadata": {
+                                "designer": {
+                                    "x": 2050,
+                                    "y": 157
+                                }
+                            },
+                            "routes": [
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 9,
+                                            "module": "http:MakeRequest",
+                                            "version": 4,
+                                            "parameters": {
+                                                "tlsType": "",
+                                                "proxyKeychain": "",
+                                                "authenticationType": "noAuth"
+                                            },
+                                            "filter": {
+                                                "name": "Company Not Found",
+                                                "conditions": [
+                                                    [
+                                                        {
+                                                            "a": "{{length(7.data)}}",
+                                                            "b": "0",
+                                                            "o": "number:equal"
+                                                        }
+                                                    ]
+                                                ]
+                                            },
+                                            "mapper": {
+                                                "url": "https://api.webcrm.com/Organisations",
+                                                "method": "post",
+                                                "headers": [
+                                                    {
+                                                        "name": "Authorization",
+                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                    },
+                                                    {
+                                                        "name": "Content-Type",
+                                                        "value": "application/json; charset=utf-8"
+                                                    }
+                                                ],
+                                                "contentType": "json",
+                                                "inputMethod": "jsonString",
+                                                "shareCookies": false,
+                                                "parseResponse": true,
+                                                "allowRedirects": true,
+                                                "stopOnHttpError": true,
+                                                "jsonStringBodyContent": "{\n  \"OrganisationId\": \"0\",\n  \"OrganisationName\": \"{{trim(toString(2.$5))}}\",\n  \"OrganisationCountry\": \"{{trim(toString(2.$6))}}\",\n  \"OrganisationCurrencyName\": \"EUR\",\n  \"OrganisationCustom5\": \"Inbox Automation\",\n  \"OrganisationComment\": \"New lead from Request a Quote form\"\n}",
+                                                "requestCompressedContent": true
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2400,
+                                                    "y": 0,
+                                                    "name": "Create Company (New)"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": 10,
+                                            "module": "http:MakeRequest",
+                                            "version": 4,
+                                            "parameters": {
+                                                "tlsType": "",
+                                                "proxyKeychain": "",
+                                                "authenticationType": "noAuth"
+                                            },
+                                            "mapper": {
+                                                "url": "https://api.webcrm.com/Persons",
+                                                "method": "post",
+                                                "headers": [
+                                                    {
+                                                        "name": "Authorization",
+                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                    },
+                                                    {
+                                                        "name": "Content-Type",
+                                                        "value": "application/json; charset=utf-8"
+                                                    }
+                                                ],
+                                                "contentType": "json",
+                                                "inputMethod": "jsonString",
+                                                "shareCookies": false,
+                                                "parseResponse": true,
+                                                "allowRedirects": true,
+                                                "stopOnHttpError": true,
+                                                "jsonStringBodyContent": "{\n  \"PersonId\": 0,\n  \"PersonFirstName\": \"{{trim(toString(2.$1))}}\",\n  \"PersonLastName\": \"{{trim(toString(2.$2))}}\",\n  \"PersonEmail\": \"{{lower(trim(toString(2.$3)))}}\",\n  \"PersonDirectPhone\": \"{{trim(toString(2.$4))}}\",\n  \"PersonOrganisationId\": {{9.data.OrganisationId}}\n}",
+                                                "requestCompressedContent": true
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2700,
+                                                    "y": 0,
+                                                    "name": "Create Contact (New Company)"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 11,
+                                            "module": "http:MakeRequest",
+                                            "version": 4,
+                                            "parameters": {
+                                                "tlsType": "",
+                                                "proxyKeychain": "",
+                                                "authenticationType": "noAuth"
+                                            },
+                                            "filter": {
+                                                "name": "Company Found",
+                                                "conditions": [
+                                                    [
+                                                        {
+                                                            "a": "{{length(7.data)}}",
+                                                            "b": "0",
+                                                            "o": "number:greater"
+                                                        }
+                                                    ]
+                                                ]
+                                            },
+                                            "mapper": {
+                                                "url": "https://api.webcrm.com/Persons",
+                                                "method": "post",
+                                                "headers": [
+                                                    {
+                                                        "name": "Authorization",
+                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                    },
+                                                    {
+                                                        "name": "Content-Type",
+                                                        "value": "application/json; charset=utf-8"
+                                                    }
+                                                ],
+                                                "contentType": "json",
+                                                "inputMethod": "jsonString",
+                                                "shareCookies": false,
+                                                "parseResponse": true,
+                                                "allowRedirects": true,
+                                                "stopOnHttpError": true,
+                                                "jsonStringBodyContent": "{\n  \"PersonId\": 0,\n  \"PersonFirstName\": \"{{trim(toString(2.$1))}}\",\n  \"PersonLastName\": \"{{trim(toString(2.$2))}}\",\n  \"PersonEmail\": \"{{lower(trim(toString(2.$3)))}}\",\n  \"PersonDirectPhone\": \"{{trim(toString(2.$4))}}\",\n  \"PersonOrganisationId\": {{7.data[1].OrganisationId}}\n}",
+                                                "requestCompressedContent": true
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2400,
+                                                    "y": 300,
+                                                    "name": "Create Contact (Existing Company)"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "flow": [
+                        {
+                            "id": 12,
+                            "module": "http:MakeRequest",
+                            "version": 4,
+                            "parameters": {
+                                "tlsType": "",
+                                "proxyKeychain": "",
+                                "authenticationType": "noAuth"
+                            },
+                            "filter": {
+                                "name": "Email Found",
+                                "conditions": [
+                                    [
+                                        {
+                                            "a": "{{length(5.data)}}",
+                                            "b": "0",
+                                            "o": "number:greater"
+                                        }
+                                    ]
+                                ]
+                            },
+                            "mapper": {
+                                "url": "https://api.webcrm.com/Organisations/{{5.data[1].PersonOrganisationId}}",
+                                "method": "get",
+                                "headers": [
+                                    {
+                                        "name": "Authorization",
+                                        "value": "Bearer {{4.data.AccessToken}}"
+                                    },
+                                    {
+                                        "name": "Content-Type",
+                                        "value": "application/json; charset=utf-8"
+                                    }
+                                ],
+                                "shareCookies": false,
+                                "parseResponse": true,
+                                "allowRedirects": true,
+                                "stopOnHttpError": true,
+                                "requestCompressedContent": true
+                            },
+                            "metadata": {
+                                "designer": {
+                                    "x": 1747,
+                                    "y": 1052,
+                                    "name": "Get Person's Organisation"
+                                }
+                            }
+                        },
+                        {
+                            "id": 13,
+                            "module": "builtin:BasicRouter",
+                            "version": 1,
+                            "mapper": null,
+                            "metadata": {
+                                "designer": {
+                                    "x": 2080,
+                                    "y": 1060
+                                }
+                            },
+                            "routes": [
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 14,
+                                            "module": "http:MakeRequest",
+                                            "version": 4,
+                                            "parameters": {
+                                                "tlsType": "",
+                                                "proxyKeychain": "",
+                                                "authenticationType": "noAuth"
+                                            },
+                                            "filter": {
+                                                "name": "NOT Spare Parts AND Different Company",
+                                                "conditions": [
+                                                    [
+                                                        {
+                                                            "a": "{{12.data.OrganisationName}}",
+                                                            "b": "Spare parts request",
+                                                            "o": "text:notequal"
+                                                        },
+                                                        {
+                                                            "a": "{{lower(trim(toString(12.data.OrganisationName)))}}",
+                                                            "b": "{{lower(trim(toString(2.$5)))}}",
+                                                            "o": "text:notequal"
+                                                        }
+                                                    ]
+                                                ]
+                                            },
+                                            "mapper": {
+                                                "url": "https://api.webcrm.com/Queries",
+                                                "method": "get",
+                                                "headers": [
+                                                    {
+                                                        "name": "Authorization",
+                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                    },
+                                                    {
+                                                        "name": "Content-Type",
+                                                        "value": "application/json; charset=utf-8"
+                                                    }
+                                                ],
+                                                "shareCookies": false,
+                                                "parseResponse": true,
+                                                "allowRedirects": true,
+                                                "queryParameters": [
+                                                    {
+                                                        "name": "script",
+                                                        "value": "SELECT OrganisationId, OrganisationName FROM Organisation WHERE OrganisationName = '{{replace(trim(toString(2.$5)); \"'\"; \"''\")}}'"
+                                                    },
+                                                    {
+                                                        "name": "Size",
+                                                        "value": "10"
+                                                    }
+                                                ],
+                                                "stopOnHttpError": true,
+                                                "requestCompressedContent": true
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2347,
+                                                    "y": 729,
+                                                    "name": "Query Org by Name (Not Spare Parts)"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": 15,
+                                            "module": "builtin:BasicRouter",
+                                            "version": 1,
+                                            "mapper": null,
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2664,
+                                                    "y": 730
+                                                }
+                                            },
+                                            "routes": [
+                                                {
+                                                    "flow": [
+                                                        {
+                                                            "id": 16,
+                                                            "module": "http:MakeRequest",
+                                                            "version": 4,
+                                                            "parameters": {
+                                                                "tlsType": "",
+                                                                "proxyKeychain": "",
+                                                                "authenticationType": "noAuth"
+                                                            },
+                                                            "filter": {
+                                                                "name": "Company Not Found",
+                                                                "conditions": [
+                                                                    [
+                                                                        {
+                                                                            "a": "{{length(14.data)}}",
+                                                                            "b": "0",
+                                                                            "o": "number:equal"
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            },
+                                                            "mapper": {
+                                                                "url": "https://api.webcrm.com/Organisations",
+                                                                "method": "post",
+                                                                "headers": [
+                                                                    {
+                                                                        "name": "Authorization",
+                                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                                    },
+                                                                    {
+                                                                        "name": "Content-Type",
+                                                                        "value": "application/json; charset=utf-8"
+                                                                    }
+                                                                ],
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": true,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\n  \"OrganisationId\": \"0\",\n  \"OrganisationName\": \"{{trim(toString(2.$5))}}\",\n  \"OrganisationCountry\": \"{{trim(toString(2.$6))}}\",\n  \"OrganisationCurrencyName\": \"EUR\",\n  \"OrganisationCustom5\": \"Inbox Automation\",\n  \"OrganisationComment\": \"New lead from Request a Quote form\"\n}",
+                                                                "requestCompressedContent": true
+                                                            },
+                                                            "metadata": {
+                                                                "designer": {
+                                                                    "x": 3069,
+                                                                    "y": 573,
+                                                                    "name": "Create Company (Not Spare Parts)"
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "id": 17,
+                                                            "module": "http:MakeRequest",
+                                                            "version": 4,
+                                                            "parameters": {
+                                                                "tlsType": "",
+                                                                "proxyKeychain": "",
+                                                                "authenticationType": "noAuth"
+                                                            },
+                                                            "mapper": {
+                                                                "url": "https://api.webcrm.com/Persons",
+                                                                "method": "post",
+                                                                "headers": [
+                                                                    {
+                                                                        "name": "Authorization",
+                                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                                    },
+                                                                    {
+                                                                        "name": "Content-Type",
+                                                                        "value": "application/json; charset=utf-8"
+                                                                    }
+                                                                ],
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": true,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\n  \"PersonId\": 0,\n  \"PersonFirstName\": \"{{trim(toString(2.$1))}}\",\n  \"PersonLastName\": \"{{trim(toString(2.$2))}}\",\n  \"PersonEmail\": \"{{lower(trim(toString(2.$3)))}}\",\n  \"PersonDirectPhone\": \"{{trim(toString(2.$4))}}\",\n  \"PersonOrganisationId\": {{16.data.OrganisationId}}\n}",
+                                                                "requestCompressedContent": true
+                                                            },
+                                                            "metadata": {
+                                                                "designer": {
+                                                                    "x": 3490,
+                                                                    "y": 541,
+                                                                    "name": "Create Contact (New Company, Not Spare Parts)"
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "flow": [
+                                                        {
+                                                            "id": 18,
+                                                            "module": "http:MakeRequest",
+                                                            "version": 4,
+                                                            "parameters": {
+                                                                "tlsType": "",
+                                                                "proxyKeychain": "",
+                                                                "authenticationType": "noAuth"
+                                                            },
+                                                            "filter": {
+                                                                "name": "Company Found",
+                                                                "conditions": [
+                                                                    [
+                                                                        {
+                                                                            "a": "{{length(14.data)}}",
+                                                                            "b": "0",
+                                                                            "o": "number:greater"
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            },
+                                                            "mapper": {
+                                                                "url": "https://api.webcrm.com/Persons",
+                                                                "method": "post",
+                                                                "headers": [
+                                                                    {
+                                                                        "name": "Authorization",
+                                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                                    },
+                                                                    {
+                                                                        "name": "Content-Type",
+                                                                        "value": "application/json; charset=utf-8"
+                                                                    }
+                                                                ],
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": true,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\n  \"PersonId\": 0,\n  \"PersonFirstName\": \"{{trim(toString(2.$1))}}\",\n  \"PersonLastName\": \"{{trim(toString(2.$2))}}\",\n  \"PersonEmail\": \"{{lower(trim(toString(2.$3)))}}\",\n  \"PersonDirectPhone\": \"{{trim(toString(2.$4))}}\",\n  \"PersonOrganisationId\": {{14.data[1].OrganisationId}}\n}",
+                                                                "requestCompressedContent": true
+                                                            },
+                                                            "metadata": {
+                                                                "designer": {
+                                                                    "x": 3024,
+                                                                    "y": 900,
+                                                                    "name": "Create Contact (Existing Company, Not Spare Parts)"
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 19,
+                                            "module": "http:MakeRequest",
+                                            "version": 4,
+                                            "parameters": {
+                                                "tlsType": "",
+                                                "proxyKeychain": "",
+                                                "authenticationType": "noAuth"
+                                            },
+                                            "filter": {
+                                                "name": "IS Spare Parts Request",
+                                                "conditions": [
+                                                    [
+                                                        {
+                                                            "a": "{{12.data.OrganisationName}}",
+                                                            "b": "Spare parts request",
+                                                            "o": "text:equal"
+                                                        }
+                                                    ]
+                                                ]
+                                            },
+                                            "mapper": {
+                                                "url": "https://api.webcrm.com/Persons/{{5.data[1].PersonId}}",
+                                                "method": "put",
+                                                "headers": [
+                                                    {
+                                                        "name": "Authorization",
+                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                    },
+                                                    {
+                                                        "name": "Content-Type",
+                                                        "value": "application/json; charset=utf-8"
+                                                    }
+                                                ],
+                                                "contentType": "json",
+                                                "inputMethod": "jsonString",
+                                                "shareCookies": false,
+                                                "parseResponse": true,
+                                                "allowRedirects": true,
+                                                "stopOnHttpError": true,
+                                                "jsonStringBodyContent": "{\n  \"PersonId\": {{5.data[1].PersonId}},\n  \"PersonStatus\": \"Resigned\"\n}",
+                                                "requestCompressedContent": true
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2318,
+                                                    "y": 1373,
+                                                    "name": "Mark Old Contact as Resigned"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": 20,
+                                            "module": "http:MakeRequest",
+                                            "version": 4,
+                                            "parameters": {
+                                                "tlsType": "",
+                                                "proxyKeychain": "",
+                                                "authenticationType": "noAuth"
+                                            },
+                                            "mapper": {
+                                                "url": "https://api.webcrm.com/Queries",
+                                                "method": "get",
+                                                "headers": [
+                                                    {
+                                                        "name": "Authorization",
+                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                    },
+                                                    {
+                                                        "name": "Content-Type",
+                                                        "value": "application/json; charset=utf-8"
+                                                    }
+                                                ],
+                                                "shareCookies": false,
+                                                "parseResponse": true,
+                                                "allowRedirects": true,
+                                                "queryParameters": [
+                                                    {
+                                                        "name": "script",
+                                                        "value": "SELECT OrganisationId, OrganisationName FROM Organisation WHERE OrganisationName = '{{replace(trim(toString(2.$5)); \"'\"; \"''\")}}'"
+                                                    },
+                                                    {
+                                                        "name": "Size",
+                                                        "value": "10"
+                                                    }
+                                                ],
+                                                "stopOnHttpError": true,
+                                                "requestCompressedContent": true
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2672,
+                                                    "y": 1342,
+                                                    "name": "Query Org by Name (Spare Parts)"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": 21,
+                                            "module": "builtin:BasicRouter",
+                                            "version": 1,
+                                            "mapper": null,
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 3000,
+                                                    "y": 1350
+                                                }
+                                            },
+                                            "routes": [
+                                                {
+                                                    "flow": [
+                                                        {
+                                                            "id": 22,
+                                                            "module": "http:MakeRequest",
+                                                            "version": 4,
+                                                            "parameters": {
+                                                                "tlsType": "",
+                                                                "proxyKeychain": "",
+                                                                "authenticationType": "noAuth"
+                                                            },
+                                                            "filter": {
+                                                                "name": "Company Not Found",
+                                                                "conditions": [
+                                                                    [
+                                                                        {
+                                                                            "a": "{{length(20.data)}}",
+                                                                            "b": "0",
+                                                                            "o": "number:equal"
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            },
+                                                            "mapper": {
+                                                                "url": "https://api.webcrm.com/Organisations",
+                                                                "method": "post",
+                                                                "headers": [
+                                                                    {
+                                                                        "name": "Authorization",
+                                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                                    },
+                                                                    {
+                                                                        "name": "Content-Type",
+                                                                        "value": "application/json; charset=utf-8"
+                                                                    }
+                                                                ],
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": true,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\n  \"OrganisationId\": \"0\",\n  \"OrganisationName\": \"{{trim(toString(2.$5))}}\",\n  \"OrganisationCountry\": \"{{trim(toString(2.$6))}}\",\n  \"OrganisationCurrencyName\": \"EUR\",\n  \"OrganisationCustom5\": \"Inbox Automation\",\n  \"OrganisationComment\": \"New lead from Request a Quote form (reorganized from Spare Parts)\"\n}",
+                                                                "requestCompressedContent": true
+                                                            },
+                                                            "metadata": {
+                                                                "designer": {
+                                                                    "x": 3391,
+                                                                    "y": 1140,
+                                                                    "name": "Create Company (from Spare Parts)"
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "id": 23,
+                                                            "module": "http:MakeRequest",
+                                                            "version": 4,
+                                                            "parameters": {
+                                                                "tlsType": "",
+                                                                "proxyKeychain": "",
+                                                                "authenticationType": "noAuth"
+                                                            },
+                                                            "mapper": {
+                                                                "url": "https://api.webcrm.com/Persons",
+                                                                "method": "post",
+                                                                "headers": [
+                                                                    {
+                                                                        "name": "Authorization",
+                                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                                    },
+                                                                    {
+                                                                        "name": "Content-Type",
+                                                                        "value": "application/json; charset=utf-8"
+                                                                    }
+                                                                ],
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": true,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\n  \"PersonId\": 0,\n  \"PersonFirstName\": \"{{trim(toString(2.$1))}}\",\n  \"PersonLastName\": \"{{trim(toString(2.$2))}}\",\n  \"PersonEmail\": \"{{lower(trim(toString(2.$3)))}}\",\n  \"PersonDirectPhone\": \"{{trim(toString(2.$4))}}\",\n  \"PersonOrganisationId\": {{22.data.OrganisationId}}\n}",
+                                                                "requestCompressedContent": true
+                                                            },
+                                                            "metadata": {
+                                                                "designer": {
+                                                                    "x": 3860,
+                                                                    "y": 1134,
+                                                                    "name": "Create Contact (New Company from Spare Parts)"
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "flow": [
+                                                        {
+                                                            "id": 24,
+                                                            "module": "http:MakeRequest",
+                                                            "version": 4,
+                                                            "parameters": {
+                                                                "tlsType": "",
+                                                                "proxyKeychain": "",
+                                                                "authenticationType": "noAuth"
+                                                            },
+                                                            "filter": {
+                                                                "name": "Company Found",
+                                                                "conditions": [
+                                                                    [
+                                                                        {
+                                                                            "a": "{{length(20.data)}}",
+                                                                            "b": "0",
+                                                                            "o": "number:greater"
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            },
+                                                            "mapper": {
+                                                                "url": "https://api.webcrm.com/Persons",
+                                                                "method": "post",
+                                                                "headers": [
+                                                                    {
+                                                                        "name": "Authorization",
+                                                                        "value": "Bearer {{4.data.AccessToken}}"
+                                                                    },
+                                                                    {
+                                                                        "name": "Content-Type",
+                                                                        "value": "application/json; charset=utf-8"
+                                                                    }
+                                                                ],
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": true,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\n  \"PersonId\": 0,\n  \"PersonFirstName\": \"{{trim(toString(2.$1))}}\",\n  \"PersonLastName\": \"{{trim(toString(2.$2))}}\",\n  \"PersonEmail\": \"{{lower(trim(toString(2.$3)))}}\",\n  \"PersonDirectPhone\": \"{{trim(toString(2.$4))}}\",\n  \"PersonOrganisationId\": {{20.data[1].OrganisationId}}\n}",
+                                                                "requestCompressedContent": true
+                                                            },
+                                                            "metadata": {
+                                                                "designer": {
+                                                                    "x": 3442,
+                                                                    "y": 1544,
+                                                                    "name": "Create Contact (Existing Company from Spare Parts)"
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "metadata": {
+        "instant": false,
+        "version": 1,
+        "scenario": {
+            "roundtrips": 1,
+            "maxErrors": 3,
+            "autoCommit": true,
+            "autoCommitTriggerLast": true,
+            "sequential": true,
+            "slots": null,
+            "confidential": false,
+            "dataloss": false,
+            "dlq": false,
+            "freshVariables": false
+        },
+        "designer": {
+            "orphans": []
+        },
+        "zone": "eu1.make.com",
+        "notes": []
+    }
+}

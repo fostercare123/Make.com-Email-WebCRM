@@ -3,9 +3,6 @@
 .env.local
 .env.*.local
 
-# Blueprint contains API credentials - keep local only
-*.blueprint.json
-
 # Virtual Environment
 .venv/
 venv/
