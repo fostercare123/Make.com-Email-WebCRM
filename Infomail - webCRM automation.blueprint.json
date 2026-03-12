@@ -11,10 +11,10 @@
                 "text": "",
                 "folder": "INBOX",
                 "account": 5785042,
-                "subject": "",
+                "subject": "request",
                 "criteria": "UNSEEN",
                 "markSeen": false,
-                "maxResults": 10
+                "maxResults": 5
             },
             "mapper": {},
             "metadata": {
@@ -106,7 +106,7 @@
             "version": 1,
             "parameters": {
                 "global": false,
-                "pattern": "Full\\s+Name\\s*:\\s*(\\S+)\\s+(.*?)\\nEmail\\s+Address\\s*:\\s*(.*?)\\nPhone\\s*:\\s*(.*?)\\nCompany\\s+Name\\s*:\\s*(.*?)\\nCountry\\s*:\\s*(.*?)\\n",
+                "pattern": "Full\\s+Name\\s*:\\s*(\\S+)\\s+(.*?)\\nEmail\\s+Address\\s*:\\s*(.*?)\\nPhone\\s*:\\s*(.*?)\\nCompany\\s+Name\\s*:\\s*(.*?)\\nCountry\\s*:\\s*(.*?)\\nMessage\\s*:\\s*(.*?)\\n",
                 "multiline": true,
                 "sensitive": false,
                 "singleline": false,
@@ -216,6 +216,11 @@
                         "name": "$6",
                         "type": "text",
                         "label": "$6"
+                    },
+                    {
+                        "name": "$7",
+                        "type": "text",
+                        "label": "$7"
                     }
                 ]
             }
@@ -228,7 +233,7 @@
                 "datastore": 100642
             },
             "filter": {
-                "name": "Valid Lead (Company + Email)",
+                "name": "Valid Lead (Company + Email + Message)",
                 "conditions": [
                     [
                         {
@@ -240,6 +245,11 @@
                             "a": "{{trim(toString(2.$3))}}",
                             "b": "@",
                             "o": "text:contain"
+                        },
+                        {
+                            "a": "{{trim(toString(2.$7))}}",
+                            "b": "",
+                            "o": "text:notequal"
                         }
                     ]
                 ]
@@ -1501,6 +1511,17 @@
             "orphans": []
         },
         "zone": "eu1.make.com",
-        "notes": []
+        "notes": [
+            {
+                "moduleIds": [
+                    3
+                ],
+                "content": "<p><strong>Condition 1 — 2.$5 is not empty</strong></p><p>Company Name must be filled in. Stops leads with no company.</p><p><strong>Condition 2 — 2.$3 contains @</strong></p><p>Email Address must look like an actual email. Stops garbage or empty email fields.</p><p><strong>Condition 3 — 2.$7 is not empty</strong></p><p>Message must be filled in. Stops the empty \"ghost\" submissions you were seeing in your inbox.</p><p></p><p>All three must be true at the same time (\"and\") for the lead to pass through to webCRM. Any submission that fails even one of these conditions gets silently dropped.</p>",
+                "isFilterNote": true,
+                "metadata": {
+                    "color": "#9138FE"
+                }
+            }
+        ]
     }
 }
